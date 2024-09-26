@@ -1,0 +1,15 @@
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
+  }
+  
+  .audio-player-container {
+    margin-right: 0px; /* Adjust the margin as needed */
+  }
+  
+  .book-area-container {
+    flex: 1; /* This ensures BookArea takes up the remaining space */
+  }
+  
