@@ -44,7 +44,7 @@ const Home: React.FC<HomeProps> = () => {
       try {
         const response = await fetch(
           `http://localhost:3001/book/the-psychology-of-money/page/${
-            currentChapter + 1
+            currentPage + 1
           }/inquiry`,
           {
             method: "GET",
@@ -70,7 +70,7 @@ const Home: React.FC<HomeProps> = () => {
     };
 
     fetchBook();
-  }, [currentChapter]);
+  }, [currentChapter, currentPage]);
 
   return (
     <main className="flex min-h-screen w-screen flex-col items-center">

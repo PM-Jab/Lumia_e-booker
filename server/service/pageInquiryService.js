@@ -1,10 +1,11 @@
-import { getData } from "../repository/mongo";
+import { getOneData } from "../repository/mongo";
 import wordToSentence from "../utils/wordToSentence";
 
 const pageInquiry = async (collectionName, page, db) => {
   try {
     console.log("Data retrieving...");
-    const data = await getData(collectionName, { page: page }, db);
+    const data = await getOneData(collectionName, { page: page }, db);
+    console.log(data);
 
     const duration = data.duration;
     const audioUrl = data.audioUrl;

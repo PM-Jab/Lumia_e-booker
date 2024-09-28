@@ -46,10 +46,24 @@ async function getData(collectionName, query = {}, db) {
   return data;
 }
 
+async function getOneData(collectionName, query = {}, db) {
+  const collection = db.collection(collectionName);
+  const data = await collection.findOne(query);
+  console.log("Data retrieved");
+  return data;
+}
+
 async function getCollectionList(db = { dbName }) {
   const collections = await db.listCollections().toArray();
   console.log("Collections retrieved:", collections);
   return collections;
 }
 
-export { connectToDatabase, getData, saveData, updateData, getCollectionList };
+export {
+  connectToDatabase,
+  getData,
+  saveData,
+  updateData,
+  getCollectionList,
+  getOneData,
+};
