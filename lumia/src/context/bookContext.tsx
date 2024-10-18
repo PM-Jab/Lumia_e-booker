@@ -29,8 +29,11 @@ interface BookContextType {
   currentChapter: number;
   setCurrentChapter: React.Dispatch<React.SetStateAction<number>>;
 
-  chapter: page[];
-  setChapter: React.Dispatch<React.SetStateAction<page[]>>;
+  chapterData: page[];
+  setChapterData: React.Dispatch<React.SetStateAction<page[]>>;
+
+  totalPages: number;
+  setTotalPages: React.Dispatch<React.SetStateAction<number>>;
 }
 
 // Create the context with an initial value of null
@@ -46,8 +49,9 @@ export const BookProvider: React.FC<{ children: ReactNode }> = ({
   const [currentPage, setCurrentPage] = useState<number>(0);
 
   const [pageData, setPageData] = useState<page | null>(null);
-  const [chapter, setChapter] = useState<page[]>([]);
+  const [chapterData, setChapterData] = useState<page[]>([]);
   const [currentChapter, setCurrentChapter] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(0);
 
   return (
     <BookContext.Provider
@@ -70,8 +74,11 @@ export const BookProvider: React.FC<{ children: ReactNode }> = ({
         currentChapter,
         setCurrentChapter,
 
-        chapter,
-        setChapter,
+        chapterData,
+        setChapterData,
+
+        totalPages,
+        setTotalPages,
       }}
     >
       {children}

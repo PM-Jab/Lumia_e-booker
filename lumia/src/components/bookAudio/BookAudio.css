@@ -1,0 +1,78 @@
+.progress-bar {
+    --bg-track-color: rgba(255, 255, 255, 0.2);
+    --buffer-track-color: rgba(255, 255, 255, 0.4);
+    --progress-track-color: #f00;
+    --thumb-color: #f00;
+    --seekbar-thumb-size: 12px;
+    --seekbar-height: 4px;
+    --seekbar-parent-height: var(--seekbar-thumb-size);
+    --border-radius: 4px;
+
+    height: var(--seekbar-parent-height);
+    position: relative;
+    width: 300px;
+    /* change it to 100% later */
+    cursor: pointer;
+}
+
+#background-track {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    z-index: 2;
+    display: block;
+    height: var(--seekbar-height);
+    width: 100%;
+    border-radius: var(--border-radius);
+    background: var(--bg-track-color);
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+#buffered-track {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    z-index: 3;
+    display: block;
+    height: var(--seekbar-height);
+    background-color: var(--buffer-track-color);
+    width: var(--buffer, 0);
+    border-radius: var(--border-radius);
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+#progress-track {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    z-index: 5;
+    display: block;
+    height: var(--seekbar-height);
+    background-color: var(--progress-track-color);
+    width: var(--progress, 0);
+    border-radius: var(--border-radius);
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+#thumb {
+    height: var(--seekbar-thumb-size);
+    width: var(--seekbar-thumb-size);
+    display: block;
+    background-color: var(--thumb-color);
+    position: absolute;
+    top: 50%;
+    left: var(--progress, 0);
+    z-index: 6;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.progress-bar:hover #thumb {
+    opacity: 1;
+}

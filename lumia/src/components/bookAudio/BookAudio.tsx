@@ -1,143 +1,201 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useBook, chunkPage } from "@/context/bookContext";
-import {
-  startTimer,
-  stopTimer,
-  resetTimer,
-  getElapsedTime,
-} from "@/utils/timer";
+import React, { CSSProperties, useEffect, useRef, useState } from "react";
+import "./BookAudio.css";
 
-type BookAudioProps = {
-  text: chunkPage;
-  audioSrc: string;
-  totalDuration: number; // in seconds
-};
+const BookAudio = () => {
+  const audioUrls = [
+    "https://r2-worker.testaudio.workers.dev/the-psychology-of-money_bill-oxley_chapter1_page22",
+    "https://r2-worker.testaudio.workers.dev/the-psychology-of-money_bill-oxley_chapter1_page23",
+    "https://r2-worker.testaudio.workers.dev/the-psychology-of-money_bill-oxley_chapter1_page24",
+  ];
 
-interface BookAudioReaderProps {
-  text: string[];
-  audioSrc: string;
-  audioDuration: number;
-  audioMetadata: number[];
-}
+  const [isPlaying, setIsPlaying] = useState(false); // State to track play status
+  const [isStopped, setIsStopped] = useState(true); // State to track stop status
+  const [currentTime, setCurrentTime] = useState(0); // Current playback time
+  const [duration, setDuration] = useState(0); // Duration of the combined audio
+  const audioContextRef = useRef<AudioContext | null>(null); // Ref to hold the audio context
+  const audioBufferRef = useRef<AudioBuffer | null>(null); // Ref to hold the combined audio buffer
+  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null); // Ref for the current audio source node
+  const startTimeRef = useRef<number | null>(null); // To track the start time for seeking
+  const [isSeeking, setIsSeeking] = useState(false); // State to track whether user is seeking
 
-const BookAudio: React.FC<BookAudioReaderProps> = ({
-  text,
-  audioSrc,
-  audioDuration,
-  audioMetadata,
-}) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [highlightIndex, setHighlightIndex] = useState<number | null>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const { book } = useBook();
+  // Function to fetch, decode, and combine audio files
+  const fetchAndCombineAudio = async () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
 
-  // const paragraphEndTimes: number[] = audioMetadata.map(
-  //   (duration) => duration * 1000
-  // );
+    const audioContext = audioContextRef.current;
 
-  // const handlePlayPause = () => {
-  //   if (audioRef.current) {
-  //     if (isPlaying) {
-  //       pauseAudio();
-  //     } else {
-  //       playAudio();
-  //     }
-  //   }
-  // };
+    // Fetch and decode all audio files
+    const audioBuffers = await Promise.all(
+      audioUrls.map(async (url) => {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        return await audioContext.decodeAudioData(arrayBuffer);
+      })
+    );
 
-  // const playAudio = () => {
-  //   if (audioRef.current) {
-  //     audioRef.current.play();
-  //     startTimer();
-  //     setIsPlaying(true);
-  //   }
-  // };
+    // Calculate the total length of all audio buffers combined
+    const totalLength = audioBuffers.reduce(
+      (sum, buffer) => sum + buffer.length,
+      0
+    );
 
-  // const pauseAudio = () => {
-  //   if (audioRef.current) {
-  //     audioRef.current.pause();
-  //     stopTimer();
-  //     setIsPlaying(false);
-  //   }
-  // };
-  // const updateHighlight = () => {
-  //   const currentTime = getElapsedTime();
+    // Create a new buffer to hold the combined audio data
+    const combinedBuffer = audioContext.createBuffer(
+      audioBuffers[0].numberOfChannels,
+      totalLength,
+      audioBuffers[0].sampleRate
+    );
 
-  //   const newIndex = paragraphEndTimes.findIndex(
-  //     (endTime) => currentTime <= endTime
-  //   );
+    // Copy each audio buffer into the combined buffer
+    let offset = 0;
+    audioBuffers.forEach((buffer) => {
+      for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+        combinedBuffer
+          .getChannelData(channel)
+          .set(buffer.getChannelData(channel), offset);
+      }
+      offset += buffer.length;
+    });
 
-  //   setHighlightIndex(newIndex >= 0 ? newIndex : text.length - 1);
-  // };
+    audioBufferRef.current = combinedBuffer; // Store the combined buffer
+    setDuration(combinedBuffer.duration); // Set the total duration
+  };
 
-  // useEffect(() => {
-  //   if (audioRef.current) {
-  //     audioRef.current.addEventListener("timeupdate", updateHighlight);
-  //   }
-  //   return () => {
-  //     audioRef.current?.removeEventListener("timeupdate", updateHighlight);
-  //   };
-  // }, [isPlaying]);
+  // Function to play the combined audio buffer
+  const playCombinedAudio = () => {
+    if (audioContextRef.current && audioBufferRef.current) {
+      const audioContext = audioContextRef.current;
+
+      // Stop any currently playing audio
+      if (audioSourceRef.current) {
+        audioSourceRef.current.stop();
+      }
+
+      const audioSource = audioContext.createBufferSource();
+      audioSource.buffer = audioBufferRef.current; // Set the combined buffer as the source
+      audioSource.connect(audioContext.destination); // Connect to the output (speakers)
+
+      const currentTimeInAudio = isSeeking ? currentTime : 0;
+      audioSource.start(0, currentTimeInAudio); // Start playing from currentTime if seeking
+
+      startTimeRef.current = audioContext.currentTime - currentTimeInAudio; // Track the start time for seeking
+
+      audioSourceRef.current = audioSource; // Store the current audio source node
+      setIsPlaying(true);
+      setIsStopped(false);
+
+      // Stop playing once the audio is finished
+      audioSource.onended = () => {
+        setIsPlaying(false);
+        setIsStopped(true);
+      };
+    }
+  };
+
+  // Function to pause the audio
+  const pauseAudio = () => {
+    if (audioContextRef.current && isPlaying) {
+      audioContextRef.current.suspend(); // Suspend the audio context (pauses the audio)
+      setIsPlaying(false);
+    }
+  };
+
+  // Function to resume the paused audio
+  const resumeAudio = () => {
+    if (audioContextRef.current && !isPlaying) {
+      audioContextRef.current.resume(); // Resume the audio context (plays the audio again)
+      setIsPlaying(true);
+    }
+  };
+
+  // Function to stop the audio completely
+  const stopAudio = () => {
+    if (audioContextRef.current && audioSourceRef.current) {
+      audioSourceRef.current.stop(); // Stop the current audio source node
+      setIsPlaying(false);
+      setIsStopped(true);
+      setCurrentTime(0); // Reset current time
+    }
+  };
+
+  // Function to handle play button click
+  const handlePlay = async () => {
+    if (!audioBufferRef.current) {
+      await fetchAndCombineAudio(); // Fetch and combine audio if not done yet
+    }
+    playCombinedAudio(); // Play the combined audio
+  };
+
+  // Function to handle seeking
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTime = parseFloat(e.target.value);
+    setCurrentTime(newTime); // Update the current time as user seeks
+    setIsSeeking(true);
+  };
+
+  // Sync current time with the playing audio in real-time
+  useEffect(() => {
+    let interval: number;
+    if (isPlaying && audioContextRef.current) {
+      interval = window.setInterval(() => {
+        if (audioContextRef.current && startTimeRef.current !== null) {
+          const elapsedTime =
+            audioContextRef.current.currentTime - startTimeRef.current;
+          setCurrentTime(elapsedTime);
+        }
+      }, 1000);
+    }
+    return () => clearInterval(interval); // Cleanup the interval on component unmount
+  }, [isPlaying]);
+
+  useEffect(() => {
+    // Clean up audio context when the component unmounts
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
+  }, []);
 
   return (
-    <div className="book-audio-reader">
-      {book.length > 0 ? (
-        <div className="book-content">
-          {book[0].map((sentence, index) => {
-            return (
-              <span
-                key={index}
-                className={index % 2 === 0 ? "bg-yellow-200" : "bg-lime-300"}
-              >
-                {sentence}
-              </span>
-            );
-          })}
-        </div>
-      ) : (
-        <p>Loading...</p>
-      )}
-      {/* <div className="audio-panel">
-        <button onClick={handlePlayPause}>
-          {isPlaying ? "Pause" : "Play"}
-        </button>
-        <audio ref={audioRef} src={audioSrc} />
-      </div> */}
-      <style jsx>{`
-        .book-audio-reader {
-          max-width: 600px;
-          margin: auto;
-          padding: 20px;
-          border: 1px solid #ccc;
-          border-radius: 8px;
-          background: #f9f9f9;
-        }
-        .book-content {
-          font-family: "Times New Roman", serif;
-          line-height: 1.6;
-          margin-bottom: 20px;
-        }
-        p.highlighted {
-          background-color: yellow;
-        }
-        .audio-panel {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        button {
-          padding: 10px 20px;
-          font-size: 16px;
-          cursor: pointer;
-          border: none;
-          border-radius: 5px;
-          background-color: #0070f3;
-          color: white;
-        }
-        button:hover {
-          background-color: #005bb5;
-        }
-      `}</style>
+    <div>
+      <h3>Book Audio Player</h3>
+
+      {/* Current Time and Duration Display */}
+      <div>
+        <span>
+          Current Time: {currentTime.toFixed(2)} / {duration.toFixed(2)} seconds
+        </span>
+      </div>
+
+      {/* Seek Bar */}
+      <input
+        type="range"
+        min="0"
+        max={duration}
+        value={currentTime}
+        onChange={handleSeek}
+        onMouseUp={() => {
+          setIsSeeking(false); // Re-enable normal play after seeking
+          playCombinedAudio(); // Replay the audio from the new time
+        }}
+      />
+
+      {/* Audio Controls */}
+      <button onClick={handlePlay} disabled={isPlaying}>
+        {isPlaying ? "Playing..." : "Play"}
+      </button>
+      <button onClick={pauseAudio} disabled={!isPlaying || isStopped}>
+        Pause
+      </button>
+      <button onClick={resumeAudio} disabled={isPlaying || isStopped}>
+        Resume
+      </button>
+      <button onClick={stopAudio} disabled={isStopped}>
+        Stop
+      </button>
     </div>
   );
 };

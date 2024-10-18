@@ -1,47 +1,61 @@
-import React, { use, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./AudioPlayer.css";
 import { useBook } from "@/context/bookContext";
-import {
-  startTimer,
-  stopTimer,
-  resetTimer,
-  getElapsedTime,
-} from "@/utils/timer";
 
 interface AudioPlayerProps {
+  onPageChange: (isNextPage: boolean) => void;
   src: string;
-  duration: number;
+  isAutoPlay?: boolean;
 }
 
-const AudioPlayer: React.FC<AudioPlayerProps> = () => {
+const AudioPlayer: React.FC<AudioPlayerProps> = ({ onPageChange, src }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [currentTime, setCurrentTime] = useState<number>(0);
-  const { setHighlightIndex, pageData, currentPage } = useBook();
-  const speed = 1;
+  const { setHighlightIndex, pageData } = useBook();
+  const [isAutoPlay, setIsAutoPlay] = useState(true);
+
+  const playAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
+  const pauseAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  const resetPage = (isAutoPlay: boolean) => {
+    setHighlightIndex(0);
+    isAutoPlay ? playAudio() : pauseAudio();
+  };
+
   const togglePlayPause = () => {
     if (audioRef.current) {
       if (isPlaying) {
-        audioRef.current.pause();
-        stopTimer();
+        pauseAudio();
       } else {
-        audioRef.current.play();
-        startTimer();
+        playAudio();
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-    }
-  };
+  const Highlighting = () => {
+    const currentTime = audioRef.current
+      ? audioRef.current.currentTime * 1000
+      : 0;
+    const sentenceEndTimes = pageData?.sentenceEndTimes;
+    const sentences = pageData?.sentences;
 
-  const handleSeek = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = Number(event.target.value);
-      setCurrentTime(audioRef.current.currentTime);
+    const newIndex = sentenceEndTimes?.findIndex(
+      (endTime) => currentTime <= endTime * 1000
+    );
+
+    if (sentences && newIndex !== undefined) {
+      setHighlightIndex(newIndex >= 0 ? newIndex : sentences.length - 1);
     }
   };
 
@@ -51,56 +65,35 @@ const AudioPlayer: React.FC<AudioPlayerProps> = () => {
     return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
-  const updateHighlight = () => {
-    const currentTime = getElapsedTime();
-
-    const newIndex = pageData?.sentenceEndTimes.findIndex(
-      (endTime) => currentTime <= endTime * 1000
-    );
-
-    if (pageData?.sentences && newIndex !== undefined) {
-      setHighlightIndex(
-        newIndex >= 0 ? newIndex : pageData?.sentences.length - 1
-      );
-    }
-  };
-
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.addEventListener("timeupdate", updateHighlight);
-    }
-    return () => {
-      audioRef.current?.removeEventListener("timeupdate", updateHighlight);
-    };
-  }, [isPlaying]);
-
-  useEffect(() => {
-    setHighlightIndex(0);
-    resetTimer();
-    setIsPlaying(false);
+    resetPage(isAutoPlay);
   }, [pageData]);
 
   return (
     <div className="audio-player">
       <audio
         ref={audioRef}
-        src={pageData?.audioUrl}
-        onTimeUpdate={handleTimeUpdate}
+        src={src}
+        onTimeUpdate={Highlighting}
+        autoPlay={isAutoPlay}
+        onEnded={() => onPageChange(true)}
+        controls={true}
+        // onPlay={togglePlayPause}
+        // onPause={togglePlayPause}
       />
-      <button onClick={togglePlayPause}>{isPlaying ? "Pause" : "Play"}</button>
-      <div>
+      {/* <button onClick={togglePlayPause}>{isPlaying ? "Pause" : "Play"}</button> */}
+      {/* <div>
         <input
           type="range"
           min="0"
-          max={pageData?.duration}
+          max={duration}
           value={currentTime}
-          onChange={handleSeek}
+          onChange={handleTimeUpdate}
         />
         <div>
-          {formatTime(currentTime)} /{" "}
-          {formatTime(pageData?.duration ? pageData.duration : 0)}
+          {formatTime(currentTime)} / {formatTime(duration)}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

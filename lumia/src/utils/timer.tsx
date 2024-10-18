@@ -5,10 +5,17 @@ let isRunning = false;
 function startTimer() {
   if (!isRunning) {
     isRunning = true;
+    console.log("Timer started");
     timerId = setInterval(() => {
-      elapsedTime += 10; // ms
+      elapsedTime += 50; // ms
       //   console.log(elapsedTime);
-    }, 10);
+    }, 50);
+  }
+}
+
+function forceSetElapsedTime(sec: number) {
+  if (isRunning) {
+    elapsedTime = sec * 1000;
   }
 }
 
@@ -29,4 +36,10 @@ function getElapsedTime() {
   return elapsedTime;
 }
 
-export { startTimer, stopTimer, resetTimer, getElapsedTime };
+export {
+  startTimer,
+  stopTimer,
+  resetTimer,
+  getElapsedTime,
+  forceSetElapsedTime,
+};
