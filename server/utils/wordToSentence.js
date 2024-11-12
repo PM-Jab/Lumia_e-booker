@@ -11,11 +11,11 @@ const putSpace = (arrayWord) => {
   }
 };
 
-const wordToSentence = (words, wordEndTimes) => {
-  // const json_word = JSON.stringify(words);
-  // fs.writeFileSync("words.txt", json_word);
+const wordToSentence = (words, wordEndTimes, wordStartTimes) => {
   const sentences = [];
   const sentenceEndTimes = [];
+  const sentenceStartTimes = []; //! not continue
+
   let currentSentence = "";
   let wordPerSentenceCount = 0;
   for (let i = 0; i < words.length; i++) {
@@ -26,6 +26,7 @@ const wordToSentence = (words, wordEndTimes) => {
       currentSentence = currentSentence.replace("\n\n ", "\n\n");
       sentences.push(currentSentence);
       sentenceEndTimes.push(wordEndTimes[i]);
+      sentenceStartTimes.push(wordStartTimes[i]);
 
       currentSentence = "";
       wordPerSentenceCount = 0;
@@ -41,6 +42,7 @@ const wordToSentence = (words, wordEndTimes) => {
     ) {
       sentences.push(currentSentence);
       sentenceEndTimes.push(wordEndTimes[i]);
+      sentenceStartTimes.push(wordStartTimes[i]);
       currentSentence = "";
       wordPerSentenceCount = 0;
     }
@@ -49,12 +51,13 @@ const wordToSentence = (words, wordEndTimes) => {
       // console.log("the last sentence: ", currentSentence);
       sentences.push(currentSentence);
       sentenceEndTimes.push(wordEndTimes[i]);
+      sentenceStartTimes.push(wordStartTimes[i]);
       currentSentence = "";
       wordPerSentenceCount = 0;
     }
   }
 
-  return { sentences, sentenceEndTimes };
+  return { sentences, sentenceEndTimes, sentenceStartTimes };
 };
 
 export default wordToSentence;

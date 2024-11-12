@@ -26,22 +26,28 @@ const BookAudio = () => {
 
     const audioContext = audioContextRef.current;
 
-    // Fetch and decode all audio files
+    const key = "jabr2worker";
+
     const audioBuffers = await Promise.all(
       audioUrls.map(async (url) => {
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "X-Custom-Auth-Key": `${key}`,
+          },
+        });
+        console.log(response);
+
         const arrayBuffer = await response.arrayBuffer();
         return await audioContext.decodeAudioData(arrayBuffer);
       })
     );
 
-    // Calculate the total length of all audio buffers combined
     const totalLength = audioBuffers.reduce(
       (sum, buffer) => sum + buffer.length,
       0
     );
 
-    // Create a new buffer to hold the combined audio data
     const combinedBuffer = audioContext.createBuffer(
       audioBuffers[0].numberOfChannels,
       totalLength,

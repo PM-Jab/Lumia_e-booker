@@ -1,0 +1,23 @@
+.book-container {
+    width: 800px;
+    height: 80vh; 
+    padding: 20px;
+    margin: 20px auto;
+    overflow-y: auto;
+    border: 2px solid #ccc;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    font-family: serif;
+    font-size: 19px;
+    line-height: 1.15;
+    display: flex;
+    justify-content: center;
+    /* align-items: center; */
+  }
+  
+  .book-text {
+    white-space: pre-wrap; /* Preserves whitespace and line breaks */
+    margin-top: 6px;
+    margin-bottom: 6px;
+  }
+  
