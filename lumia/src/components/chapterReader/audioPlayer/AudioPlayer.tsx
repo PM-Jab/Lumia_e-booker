@@ -13,8 +13,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ onPageChange }) => {
   const [audioBuffer, setAudioBuffer] = useState<ArrayBuffer | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [audioBlobUrl, setAudioBlobUrl] = useState("");
-  const [startBit, setStartBit] = useState(0);
-  const [endBit, setEndBit] = useState(0);
+  const [currentBit, setCurrentBit] = useState(0);
   const {
     setHighlightIndex,
     pageIndex,
@@ -45,29 +44,35 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ onPageChange }) => {
   };
 
   const fetchStreamAudio = async () => {
+    if (!audioChapterUrl) {
+      return;
+    }
     try {
-      const response = await fetch("http://localhost:3001/load/stream", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Range: `bytes=${startBit}-${endBit}`,
-        },
-        body: JSON.stringify({
-          audioUrl: audioChapterUrl,
-        }),
-      });
-      if (audioBuffer) {
-        const newBuffer = await response.arrayBuffer();
-        const combinedBuffer = new Uint8Array(
-          audioBuffer.byteLength + newBuffer.byteLength
-        );
-        combinedBuffer.set(new Uint8Array(audioBuffer), 0);
-        combinedBuffer.set(new Uint8Array(newBuffer), audioBuffer.byteLength);
-        const arrayBuffer = combinedBuffer.buffer;
-        setAudioBuffer(arrayBuffer);
-      } else {
-        const arrayBuffer = await response.arrayBuffer();
-        setAudioBuffer(arrayBuffer);
+      for (let i = 0; i < 1; i++) {
+        const response = await fetch("http://localhost:3001/stream/audio", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Range: `bytes=${currentBit}-${currentBit + 960000}`,
+          },
+          body: JSON.stringify({
+            audioUrl: audioChapterUrl,
+          }),
+        });
+        if (audioBuffer) {
+          const newBuffer = await response.arrayBuffer();
+          const combinedBuffer = new Uint8Array(
+            audioBuffer.byteLength + newBuffer.byteLength
+          );
+          combinedBuffer.set(new Uint8Array(audioBuffer), 0);
+          combinedBuffer.set(new Uint8Array(newBuffer), audioBuffer.byteLength);
+          const arrayBuffer = combinedBuffer.buffer;
+          setAudioBuffer(arrayBuffer);
+        } else {
+          const arrayBuffer = await response.arrayBuffer();
+          setAudioBuffer(arrayBuffer);
+        }
+        setCurrentBit(currentBit + 960000);
       }
     } catch (error) {
       console.error("Error fetching audio:", error);
@@ -75,7 +80,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ onPageChange }) => {
   };
 
   useEffect(() => {
-    fetchAudio();
+    fetchStreamAudio();
   }, [audioChapterUrl]);
 
   useEffect(() => {

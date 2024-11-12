@@ -52,6 +52,8 @@ const Home: React.FC<HomeProps> = () => {
     audioChapterUrl,
     setAudioChapterUrl,
 
+    setAudioDuration,
+
     totalPage,
     setTotalPage,
   } = useBookChapter();
@@ -154,6 +156,7 @@ const Home: React.FC<HomeProps> = () => {
         if (data) {
           console.log("API response data:", data);
           setSentences(data.sentences);
+          setAudioDuration(data.audioDuration);
           setTimestampStartPages(data.firstWordStartTime);
           setTimestampEndPages(data.lastWordEndTime);
           setSentenceEndTimes(data.sentenceEndTimes);
