@@ -13,6 +13,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ onPageChange }) => {
   const [audioBuffer, setAudioBuffer] = useState<ArrayBuffer | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [audioBlobUrl, setAudioBlobUrl] = useState("");
+  const [startBit, setStartBit] = useState(0);
+  const [endBit, setEndBit] = useState(0);
   const {
     setHighlightIndex,
     pageIndex,
@@ -35,19 +37,38 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ onPageChange }) => {
           audioUrl: audioChapterUrl,
         }),
       });
-      // if (audioBuffer) {
-      //   const newBuffer = await response.arrayBuffer();
-      // const combinedBuffer = new Uint8Array(
-      //   audioBuffer.byteLength + newBuffer.byteLength
-      // );
-      // combinedBuffer.set(new Uint8Array(audioBuffer), 0);
-      // combinedBuffer.set(new Uint8Array(newBuffer), audioBuffer.byteLength);
-      // const arrayBuffer = combinedBuffer.buffer;
-      // setAudioBuffer(arrayBuffer);
-      // } else {
       const arrayBuffer = await response.arrayBuffer();
       setAudioBuffer(arrayBuffer);
-      // }
+    } catch (error) {
+      console.error("Error fetching audio:", error);
+    }
+  };
+
+  const fetchStreamAudio = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/load/stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Range: `bytes=${startBit}-${endBit}`,
+        },
+        body: JSON.stringify({
+          audioUrl: audioChapterUrl,
+        }),
+      });
+      if (audioBuffer) {
+        const newBuffer = await response.arrayBuffer();
+        const combinedBuffer = new Uint8Array(
+          audioBuffer.byteLength + newBuffer.byteLength
+        );
+        combinedBuffer.set(new Uint8Array(audioBuffer), 0);
+        combinedBuffer.set(new Uint8Array(newBuffer), audioBuffer.byteLength);
+        const arrayBuffer = combinedBuffer.buffer;
+        setAudioBuffer(arrayBuffer);
+      } else {
+        const arrayBuffer = await response.arrayBuffer();
+        setAudioBuffer(arrayBuffer);
+      }
     } catch (error) {
       console.error("Error fetching audio:", error);
     }

@@ -138,25 +138,26 @@ app.post("/load/audio", async (req, res) => {
 
 app.post("/stream/audio", async (req, res) => {
   try {
-    console.log("load audio");
-    const { audioUrl } = req.body;
-    const range = req.headers.range ? req.headers.range : "bytes=0-";
-    console.log("body: ", req.body);
-    console.log("audioUrl: ", audioUrl);
-    console.log("range: ", range);
+    console.log("Loading audio stream");
 
+    const { audioUrl } = req.body;
+    const range = req.headers.range || "bytes=0-";
     const key = "jabr2worker";
 
+    // Check for required parameters
     if (!audioUrl) {
-      res.status(400).json({ error: "audioUrl is required" });
-      return;
+      return res.status(400).json({ error: "audioUrl is required" });
     }
 
+    console.log("audioUrl:", audioUrl);
+    console.log("Requested range:", range);
+
+    // Fetch the audio from the source with the specified range
     const response = await fetch(audioUrl, {
       method: "GET",
       headers: {
-        "X-Custom-Auth-Key": `${key}`,
-        Range: range,
+        "X-Custom-Auth-Key": key,
+        Range: range, // Send the range request to fetch partial content
       },
     });
 
@@ -164,14 +165,14 @@ app.post("/stream/audio", async (req, res) => {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const arrayBuffer = await response.arrayBuffer();
-
-    // Get the content type of the audio file
+    // Extract headers and data
     const contentType = response.headers.get("content-type");
+    const contentLength = response.headers.get("content-length");
+    const contentRange = response.headers.get("content-range");
 
-    // Set the appropriate headers
+    // Set response headers for partial content if range is present
     res.setHeader("Content-Type", contentType);
-    res.setHeader("Content-Disposition", "inline");
+    res.setHeader("Accept-Ranges", "bytes");
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader(
       "Access-Control-Allow-Methods",
@@ -179,33 +180,23 @@ app.post("/stream/audio", async (req, res) => {
     );
     res.setHeader("Access-Control-Allow-Headers", "X-Custom-Auth-Key, Range");
 
-    // Stream the audio data to the response using a pipe
-    const readableStream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(new Uint8Array(arrayBuffer));
-        controller.close();
-      },
-    });
+    // Determine response status and headers based on content range
+    if (contentRange) {
+      // Partial content response for range requests
+      res.setHeader("Content-Range", contentRange);
+      res.setHeader("Content-Length", contentLength);
+      res.status(206); // Partial Content
+    } else {
+      // Full content response
+      res.setHeader("Content-Length", contentLength);
+      res.status(200); // OK
+    }
 
-    const reader = readableStream.getReader();
-
-    res.writeHead(200);
-
-    const streamToResponse = async () => {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          res.end();
-          break;
-        }
-        res.write(Buffer.from(value));
-      }
-    };
-
-    streamToResponse();
+    // Stream the fetched response body directly to the client
+    response.body.pipe(res);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "internal error" });
+    console.error("Error streaming audio:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
